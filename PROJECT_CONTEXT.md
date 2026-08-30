@@ -10,6 +10,14 @@ Nexus is the AtlasPay operator control plane, not a decorative dashboard. It mus
 - Add contract fixtures and accessibility checks before visual polish.
 - Record cross-repository API decisions as ADRs.
 
+## Current state
+
+- Next.js 16.3.3, React 19.2.8, and strict TypeScript 7 foundation.
+- Typed operational snapshot contract with explicit provenance, health, freshness/partial state, issuer metrics, ledger reconciliation, outbox backlog, incidents, and unavailable sections.
+- Provenance-bound AtlasPay fixture for contract development; it is explicitly labeled as non-production telemetry.
+- First operator overview workflow with authorization rate, timeouts/late responses, outbox state, ledger status, issuer-route health, incidents, and missing-data disclosure.
+- Responsive UI and GitHub Actions gates for TypeScript and production build.
+
 ## Next slice
 
-Define a read-only operational snapshot contract in AtlasPay (or an exported fixture with provenance), then build one operator workflow around it with loading, stale, partial, and error states.
+Replace direct fixture import with a typed snapshot loader that has explicit loading, stale, partial, and unavailable/error behavior. Add an operator drill-down for issuer/network transactions and reversal correlation while preserving source provenance and never presenting fixture values as live telemetry.
