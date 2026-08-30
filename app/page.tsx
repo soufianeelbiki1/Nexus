@@ -1,12 +1,19 @@
 import { atlasPayFixture } from "../data/atlaspay-snapshot";
 import { approvalRate } from "../lib/operations";
+import { buildTriageSummary, filterTransactions } from "../lib/operator-read-model";
 import { FixtureSnapshotSource, loadOperationalSnapshot } from "../lib/snapshot-loader";
 
 function pct(value: number) {
   return `${(value * 100).toFixed(1)}%`;
 }
 
-export default async function Home() {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
+  const params = await searchParams;
+  const query = params.q ?? "";
   const result = await loadOperationalSnapshot(new FixtureSnapshotSource(atlasPayFixture), {
     now: new Date(),
   });
@@ -27,6 +34,8 @@ export default async function Home() {
 
   const snapshot = result.snapshot;
   const rate = approvalRate(snapshot.authorizations);
+  const transactions = filterTransactions(snapshot.networkTransactions, query);
+  const triage = buildTriageSummary(snapshot);
   const loadMessage =
     result.state === "partial"
       ? `Partial contract: ${result.missingSections.join(" · ")}`
@@ -41,8 +50,8 @@ export default async function Home() {
           <p className="eyebrow">AtlasPay operator control plane</p>
           <h1>Nexus</h1>
           <p className="lede">
-            Read-only operational view with explicit provenance, degraded states, and no
-            fabricated live-telemetry claims.
+            Read-only operational view with runtime-validated provenance, degraded states,
+            and no fabricated live-telemetry claims.
           </p>
         </div>
         <div className={`status status-${snapshot.health}`}>
@@ -133,16 +142,62 @@ export default async function Home() {
         </aside>
       </section>
 
+      <section className="panel triage-panel" aria-label="Read-only operations triage">
+        <div className="panel-title">
+          <div>
+            <p className="eyebrow">Read-only operations</p>
+            <h2>Reconciliation & outbox triage</h2>
+          </div>
+          <span>No mutation controls</span>
+        </div>
+        <div className="triage-grid">
+          <div>
+            <small>Reconciliation</small>
+            <strong>{triage.reconciliationState}</strong>
+          </div>
+          <div>
+            <small>Outbox</small>
+            <strong>{triage.outboxState}</strong>
+          </div>
+          <div>
+            <small>Oldest unpublished</small>
+            <strong>{snapshot.outbox.oldestUnpublishedAgeSeconds}s</strong>
+          </div>
+        </div>
+        <ul className="triage-notes">
+          {triage.notes.map((note) => <li key={note}>{note}</li>)}
+        </ul>
+        <p className="readonly-note">
+          Nexus surfaces evidence only. Replay or accounting repair remains an explicit AtlasPay
+          operator action and is never triggered from this fixture-backed view.
+        </p>
+      </section>
+
       <section className="panel transaction-panel" aria-label="Network transaction drilldown">
         <div className="panel-title">
           <div>
             <p className="eyebrow">Network correlation</p>
             <h2>Recent transaction outcomes</h2>
           </div>
-          <span>{snapshot.networkTransactions.length} fixture records</span>
+          <span>{transactions.length} of {snapshot.networkTransactions.length} records</span>
         </div>
+        <form className="transaction-search" method="get">
+          <label htmlFor="transaction-query">Search issuer, STAN, RRN, outcome or reversal</label>
+          <div>
+            <input
+              id="transaction-query"
+              name="q"
+              defaultValue={query}
+              placeholder="issuer-bank-b or 234567"
+              autoComplete="off"
+            />
+            <button type="submit">Filter</button>
+          </div>
+        </form>
         <div className="transaction-list">
-          {snapshot.networkTransactions.map((transaction) => (
+          {transactions.length === 0 ? (
+            <p className="empty-state">No transaction records match this filter.</p>
+          ) : transactions.map((transaction) => (
             <article className="transaction" key={transaction.id}>
               <div>
                 <strong>{transaction.issuerId}</strong>
