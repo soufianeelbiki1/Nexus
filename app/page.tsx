@@ -1,13 +1,38 @@
 import { atlasPayFixture } from "../data/atlaspay-snapshot";
 import { approvalRate } from "../lib/operations";
+import { FixtureSnapshotSource, loadOperationalSnapshot } from "../lib/snapshot-loader";
 
 function pct(value: number) {
   return `${(value * 100).toFixed(1)}%`;
 }
 
-export default function Home() {
-  const snapshot = atlasPayFixture;
+export default async function Home() {
+  const result = await loadOperationalSnapshot(new FixtureSnapshotSource(atlasPayFixture), {
+    now: new Date(),
+  });
+
+  if (result.state === "unavailable") {
+    return (
+      <main className="shell">
+        <p className="eyebrow">AtlasPay operator control plane</p>
+        <h1>Nexus</h1>
+        <section className="panel unavailable" role="alert">
+          <h2>Operational snapshot unavailable</h2>
+          <p>{result.reason}</p>
+          <p>No telemetry values are rendered while source integrity is unknown.</p>
+        </section>
+      </main>
+    );
+  }
+
+  const snapshot = result.snapshot;
   const rate = approvalRate(snapshot.authorizations);
+  const loadMessage =
+    result.state === "partial"
+      ? `Partial contract: ${result.missingSections.join(" · ")}`
+      : result.state === "stale"
+        ? `Snapshot is ${result.ageSeconds}s old`
+        : "Snapshot freshness is within the configured window";
 
   return (
     <main className="shell">
@@ -22,9 +47,13 @@ export default function Home() {
         </div>
         <div className={`status status-${snapshot.health}`}>
           <span>{snapshot.health}</span>
-          <strong>{snapshot.dataState} data</strong>
+          <strong>{result.state} data</strong>
         </div>
       </header>
+
+      <div className={`load-state load-state-${result.state}`} role="status">
+        {loadMessage}
+      </div>
 
       <section className="provenance" aria-label="Snapshot provenance">
         <span>Contract {snapshot.provenance.contractVersion}</span>
@@ -102,6 +131,42 @@ export default function Home() {
             <p>{snapshot.missingSections.join(" · ")}</p>
           </div>
         </aside>
+      </section>
+
+      <section className="panel transaction-panel" aria-label="Network transaction drilldown">
+        <div className="panel-title">
+          <div>
+            <p className="eyebrow">Network correlation</p>
+            <h2>Recent transaction outcomes</h2>
+          </div>
+          <span>{snapshot.networkTransactions.length} fixture records</span>
+        </div>
+        <div className="transaction-list">
+          {snapshot.networkTransactions.map((transaction) => (
+            <article className="transaction" key={transaction.id}>
+              <div>
+                <strong>{transaction.issuerId}</strong>
+                <small>STAN {transaction.stan} · RRN {transaction.rrn}</small>
+              </div>
+              <div>
+                <span className={`pill disposition-${transaction.disposition}`}>
+                  {transaction.disposition.replace("_", " ")}
+                </span>
+                <small>
+                  {transaction.latencyMs === null ? "latency unavailable" : `${transaction.latencyMs} ms`}
+                </small>
+              </div>
+              <div>
+                <strong>{transaction.reversalReason ? "Reversal linked" : "No reversal"}</strong>
+                <small>
+                  {transaction.reversalReason
+                    ? `${transaction.reversalReason.replace("_", " ")} · STAN ${transaction.reversalStan} · RRN ${transaction.reversalRrn}`
+                    : "No reversal correlation in snapshot"}
+                </small>
+              </div>
+            </article>
+          ))}
+        </div>
       </section>
     </main>
   );

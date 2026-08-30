@@ -1,5 +1,6 @@
 export type SnapshotHealth = "healthy" | "degraded" | "critical";
 export type DataState = "fresh" | "stale" | "partial" | "unavailable";
+export type NetworkDisposition = "accepted" | "timed_out" | "late" | "duplicate" | "mismatched";
 
 export interface Provenance {
   source: "atlaspay-fixture" | "atlaspay-api";
@@ -25,6 +26,18 @@ export interface IssuerMetric {
   routeState: "healthy" | "degraded" | "unavailable";
 }
 
+export interface NetworkTransaction {
+  id: string;
+  issuerId: string;
+  stan: string;
+  rrn: string;
+  disposition: NetworkDisposition;
+  latencyMs: number | null;
+  reversalStan: string | null;
+  reversalRrn: string | null;
+  reversalReason: "timeout" | "late_response" | "operator" | null;
+}
+
 export interface LedgerHealth {
   balanced: boolean;
   discrepancies: number;
@@ -43,11 +56,18 @@ export interface OperationalSnapshot {
   dataState: DataState;
   authorizations: AuthorizationMetrics;
   issuers: IssuerMetric[];
+  networkTransactions: NetworkTransaction[];
   ledger: LedgerHealth;
   outbox: OutboxHealth;
   incidents: string[];
   missingSections: string[];
 }
+
+export type SnapshotLoadResult =
+  | { state: "ready"; snapshot: OperationalSnapshot }
+  | { state: "stale"; snapshot: OperationalSnapshot; ageSeconds: number }
+  | { state: "partial"; snapshot: OperationalSnapshot; missingSections: string[] }
+  | { state: "unavailable"; reason: string };
 
 export function classifyFreshness(
   generatedAt: string,
