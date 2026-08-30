@@ -1,30 +1,59 @@
 import { atlasPayFixture } from "../data/atlaspay-snapshot";
+import { AtlasPayApiSource } from "../lib/atlaspay-api";
 import { approvalRate } from "../lib/operations";
 import { buildOperatorChecks } from "../lib/operator-workflows";
+import { atlasPayApiConfigFromEnvironment } from "../lib/operator-source";
 import { FixtureSnapshotSource, loadOperationalSnapshot } from "../lib/snapshot-loader";
+import { LiveOperatorSnapshot } from "./live-operator-snapshot";
 import { TransactionExplorer } from "./transaction-explorer";
 
 function pct(value: number) {
   return `${(value * 100).toFixed(1)}%`;
 }
 
+function UnavailableSnapshot({ reason }: { reason: string }) {
+  return (
+    <main className="shell">
+      <p className="eyebrow">AtlasPay operator control plane</p>
+      <h1>Nexus</h1>
+      <section className="panel unavailable" role="alert">
+        <h2>Operational snapshot unavailable</h2>
+        <p>{reason}</p>
+        <p>No telemetry values are rendered while source integrity is unknown.</p>
+      </section>
+    </main>
+  );
+}
+
 export default async function Home() {
+  let apiConfig;
+  try {
+    apiConfig = atlasPayApiConfigFromEnvironment(process.env);
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : "invalid AtlasPay API configuration";
+    return <UnavailableSnapshot reason={reason} />;
+  }
+
+  if (apiConfig) {
+    try {
+      const snapshot = await new AtlasPayApiSource(apiConfig).load();
+      const generatedAt = new Date(snapshot.provenance.generated_at);
+      if (Number.isNaN(generatedAt.getTime())) {
+        return <UnavailableSnapshot reason="AtlasPay API snapshot generated_at is invalid" />;
+      }
+      return <LiveOperatorSnapshot snapshot={snapshot} now={new Date()} />;
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : "unknown AtlasPay API failure";
+      return <UnavailableSnapshot reason={reason} />;
+    }
+  }
+
   const result = await loadOperationalSnapshot(new FixtureSnapshotSource(atlasPayFixture), {
     now: new Date(),
   });
 
   if (result.state === "unavailable") {
-    return (
-      <main className="shell">
-        <p className="eyebrow">AtlasPay operator control plane</p>
-        <h1>Nexus</h1>
-        <section className="panel unavailable" role="alert">
-          <h2>Operational snapshot unavailable</h2>
-          <p>{result.reason}</p>
-          <p>No telemetry values are rendered while source integrity is unknown.</p>
-        </section>
-      </main>
-    );
+    return <UnavailableSnapshot reason={result.reason} />;
   }
 
   const snapshot = result.snapshot;
@@ -32,10 +61,10 @@ export default async function Home() {
   const operatorChecks = buildOperatorChecks(snapshot);
   const loadMessage =
     result.state === "partial"
-      ? `Partial contract: ${result.missingSections.join(" · ")}`
+      ? `Fixture contract: ${result.missingSections.join(" · ")}`
       : result.state === "stale"
-        ? `Snapshot is ${result.ageSeconds}s old`
-        : "Snapshot freshness is within the configured window";
+        ? `Fixture snapshot is ${result.ageSeconds}s old`
+        : "Fixture freshness is within the configured window";
 
   return (
     <main className="shell">
@@ -44,13 +73,13 @@ export default async function Home() {
           <p className="eyebrow">AtlasPay operator control plane</p>
           <h1>Nexus</h1>
           <p className="lede">
-            Read-only operational view with explicit provenance, degraded states, and no
-            fabricated live-telemetry claims.
+            Contract-development fixture mode. Configure AtlasPay API credentials to switch to
+            live durable operational data; fixture values are never used as a live fallback.
           </p>
         </div>
         <div className={`status status-${snapshot.health}`}>
           <span>{snapshot.health}</span>
-          <strong>{result.state} data</strong>
+          <strong>{result.state} fixture data</strong>
         </div>
       </header>
 
@@ -61,6 +90,7 @@ export default async function Home() {
       <section className="provenance" aria-label="Snapshot provenance">
         <span>Contract {snapshot.provenance.contractVersion}</span>
         <span>Source: {snapshot.provenance.source}</span>
+        <span>Mode: contract fixture</span>
         <span>AtlasPay: {snapshot.provenance.sourceCommit.slice(0, 12)}</span>
         <span>Generated: {new Date(snapshot.provenance.generatedAt).toLocaleString("en-GB")}</span>
       </section>
@@ -127,10 +157,12 @@ export default async function Home() {
             <span>{snapshot.incidents.length}</span>
           </div>
           {snapshot.incidents.map((incident) => (
-            <div className="incident" key={incident}>{incident}</div>
+            <div className="incident" key={incident}>
+              {incident}
+            </div>
           ))}
           <div className="missing">
-            <strong>Unavailable in this contract</strong>
+            <strong>Unavailable in this fixture contract</strong>
             <p>{snapshot.missingSections.join(" · ")}</p>
           </div>
         </aside>
@@ -138,7 +170,10 @@ export default async function Home() {
 
       <section className="operator-checks" aria-label="Reconciliation and outbox workflow">
         {operatorChecks.map((check) => (
-          <article className={"panel operator-check operator-check-" + check.severity} key={check.id}>
+          <article
+            className={"panel operator-check operator-check-" + check.severity}
+            key={check.id}
+          >
             <div>
               <p className="eyebrow">Read-only workflow</p>
               <h2>{check.title}</h2>
