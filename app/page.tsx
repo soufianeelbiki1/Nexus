@@ -28,7 +28,11 @@ function UnavailableSnapshot({ reason }: { reason: string }) {
 export default async function Home() {
   let apiConfig;
   try {
-    apiConfig = atlasPayApiConfigFromEnvironment(process.env);
+    apiConfig = atlasPayApiConfigFromEnvironment({
+      ATLASPAY_API_BASE_URL: process.env.ATLASPAY_API_BASE_URL,
+      ATLASPAY_API_TOKEN: process.env.ATLASPAY_API_TOKEN,
+      ATLASPAY_API_TIMEOUT_MS: process.env.ATLASPAY_API_TIMEOUT_MS,
+    });
   } catch (error) {
     const reason = error instanceof Error ? error.message : "invalid AtlasPay API configuration";
     return <UnavailableSnapshot reason={reason} />;
