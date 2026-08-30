@@ -1,14 +1,15 @@
 import type { OperationalSnapshot, SnapshotLoadResult } from "./operations";
 import { classifyFreshness } from "./operations";
+import { parseOperationalSnapshot } from "./snapshot-schema";
 
 export interface SnapshotSource {
-  load(): Promise<OperationalSnapshot>;
+  load(): Promise<unknown>;
 }
 
 export class FixtureSnapshotSource implements SnapshotSource {
   constructor(private readonly snapshot: OperationalSnapshot) {}
 
-  async load(): Promise<OperationalSnapshot> {
+  async load(): Promise<unknown> {
     return structuredClone(this.snapshot);
   }
 }
@@ -19,7 +20,7 @@ export async function loadOperationalSnapshot(
 ): Promise<SnapshotLoadResult> {
   const staleAfterSeconds = options.staleAfterSeconds ?? 90;
   try {
-    const snapshot = await source.load();
+    const snapshot = parseOperationalSnapshot(await source.load());
     if (snapshot.missingSections.length > 0 || snapshot.dataState === "partial") {
       return {
         state: "partial",
