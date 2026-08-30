@@ -15,10 +15,9 @@ export class FixtureSnapshotSource implements SnapshotSource {
 
 export async function loadOperationalSnapshot(
   source: SnapshotSource,
-  *,
-  now: Date,
-  staleAfterSeconds = 90,
+  options: { now: Date; staleAfterSeconds?: number },
 ): Promise<SnapshotLoadResult> {
+  const staleAfterSeconds = options.staleAfterSeconds ?? 90;
   try {
     const snapshot = await source.load();
     if (snapshot.missingSections.length > 0 || snapshot.dataState === "partial") {
@@ -29,7 +28,11 @@ export async function loadOperationalSnapshot(
       };
     }
 
-    const freshness = classifyFreshness(snapshot.provenance.generatedAt, now, staleAfterSeconds);
+    const freshness = classifyFreshness(
+      snapshot.provenance.generatedAt,
+      options.now,
+      staleAfterSeconds,
+    );
     if (freshness === "unavailable") {
       return { state: "unavailable", reason: "snapshot generatedAt is invalid" };
     }
@@ -38,7 +41,7 @@ export async function loadOperationalSnapshot(
       return {
         state: "stale",
         snapshot,
-        ageSeconds: Math.max(0, Math.floor((now.getTime() - generatedAt) / 1000)),
+        ageSeconds: Math.max(0, Math.floor((options.now.getTime() - generatedAt) / 1000)),
       };
     }
     return { state: "ready", snapshot };
