@@ -18,6 +18,10 @@ h2 { margin: 4px 0 0; font-size: 22px; }
 .status-degraded span { color: #ffc768; }
 .status-healthy span { color: #76e5a7; }
 .status-critical span { color: #ff7f8b; }
+.load-state { margin: 0 0 14px; padding: 11px 14px; border: 1px solid #2c3648; border-radius: 12px; color: #aeb9cb; background: #0d121b; font-size: 13px; }
+.load-state-partial { border-color: #4b3b21; color: #ffd48b; background: #1a140b; }
+.load-state-stale { border-color: #443654; color: #d8b7ff; background: #15101d; }
+.load-state-ready { border-color: #244533; color: #8be8b2; background: #0d1913; }
 .provenance { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; color: #8f9bb0; font-size: 12px; }
 .provenance span { border: 1px solid #252d3b; background: #0d1118; padding: 8px 10px; border-radius: 999px; }
 .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 12px; }
@@ -35,25 +39,37 @@ h2 { margin: 4px 0 0; font-size: 22px; }
 .issuer div { display: grid; gap: 5px; }
 .issuer small { color: #7f8ca0; }
 .issuer-metric { text-align: right; }
-.pill { justify-self: end; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; padding: 7px 9px; border-radius: 999px; border: 1px solid #30394a; }
-.pill-healthy { color: #70dda0; background: #10231a; }
-.pill-degraded { color: #ffca70; background: #2b2110; }
-.pill-unavailable { color: #ff8792; background: #2a1417; }
+.pill { justify-self: end; width: fit-content; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; padding: 7px 9px; border-radius: 999px; border: 1px solid #30394a; }
+.pill-healthy, .disposition-accepted { color: #70dda0; background: #10231a; }
+.pill-degraded, .disposition-timed_out, .disposition-late { color: #ffca70; background: #2b2110; }
+.pill-unavailable, .disposition-mismatched { color: #ff8792; background: #2a1417; }
+.disposition-duplicate { color: #bfa4ff; background: #1d1830; }
 .incidents { display: grid; align-content: start; gap: 12px; }
 .incident { padding: 14px; border: 1px solid #3a2f1d; background: #20180d; color: #ffd693; border-radius: 14px; line-height: 1.45; }
 .missing { margin-top: 6px; padding: 16px; border: 1px dashed #344055; border-radius: 14px; }
 .missing strong { font-size: 13px; }
 .missing p { margin: 8px 0 0; color: #7f8ca0; font-size: 13px; line-height: 1.5; }
+.transaction-panel { margin-top: 12px; }
+.transaction-list { display: grid; }
+.transaction { display: grid; grid-template-columns: 1.05fr .65fr 1.25fr; gap: 18px; padding: 18px 0; align-items: center; border-bottom: 1px solid #1c2431; }
+.transaction:last-child { border-bottom: 0; }
+.transaction div { display: grid; gap: 6px; }
+.transaction small { color: #7f8ca0; line-height: 1.4; }
+.unavailable { margin-top: 24px; border-color: #4b252c; background: #1d1013; color: #ffb2ba; }
 @media (max-width: 820px) {
   .hero { display: grid; }
   .status { width: 100%; }
   .metrics { grid-template-columns: repeat(2, 1fr); }
   .grid { grid-template-columns: 1fr; }
+  .transaction { grid-template-columns: 1fr 1fr; }
+  .transaction > div:last-child { grid-column: 1 / -1; }
 }
 @media (max-width: 520px) {
   .shell { width: min(100% - 20px, 1180px); padding-top: 32px; }
   .metrics { grid-template-columns: 1fr; }
   .issuer { grid-template-columns: 1fr auto; }
   .issuer-metric { text-align: left; }
-  .pill { grid-column: 2; grid-row: 1 / span 2; }
+  .issuer .pill { grid-column: 2; grid-row: 1 / span 2; }
+  .transaction { grid-template-columns: 1fr; }
+  .transaction > div:last-child { grid-column: auto; }
 }
