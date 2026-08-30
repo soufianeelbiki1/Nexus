@@ -19,8 +19,10 @@ Nexus is the AtlasPay operator control plane, not a decorative dashboard. It mus
 - Provenance-bound AtlasPay fixture for contract development; it is explicitly labeled as non-production telemetry.
 - Operator overview workflow with authorization rate, timeouts/late responses, outbox state, ledger status, issuer-route health, incidents, missing-data disclosure, and source state.
 - Network transaction drill-down with issuer, STAN/RRN, coordinator disposition, latency availability, and one-to-one reversal correlation/reason.
+- Client-side transaction search/filtering across issuer, STAN/RRN, reversal correlation, and disposition using validated fixture data.
+- Read-only ledger reconciliation and outbox operator checks derive severity and explicit investigation guidance without automatic accounting repair or poison-event deletion.
 - Responsive UI and GitHub Actions gates for TypeScript and production build.
 
 ## Next slice
 
-Publish the validated snapshot shape as a cross-repository AtlasPay JSON/API contract, then add transaction filtering/search and reconciliation/outbox operator workflows. Preserve read-only behavior and provenance; do not claim live telemetry until AtlasPay exposes a verified endpoint and Nexus consumes it successfully.
+Publish the validated snapshot shape as a cross-repository AtlasPay JSON/API contract and consume a verified AtlasPay endpoint behind the existing source/validation boundary. Preserve read-only behavior and provenance; do not claim live telemetry until that endpoint exists and is consumed successfully.
