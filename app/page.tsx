@@ -1,6 +1,8 @@
 import { atlasPayFixture } from "../data/atlaspay-snapshot";
 import { approvalRate } from "../lib/operations";
+import { buildOperatorChecks } from "../lib/operator-workflows";
 import { FixtureSnapshotSource, loadOperationalSnapshot } from "../lib/snapshot-loader";
+import { TransactionExplorer } from "./transaction-explorer";
 
 function pct(value: number) {
   return `${(value * 100).toFixed(1)}%`;
@@ -27,6 +29,7 @@ export default async function Home() {
 
   const snapshot = result.snapshot;
   const rate = approvalRate(snapshot.authorizations);
+  const operatorChecks = buildOperatorChecks(snapshot);
   const loadMessage =
     result.state === "partial"
       ? `Partial contract: ${result.missingSections.join(" · ")}`
@@ -133,41 +136,20 @@ export default async function Home() {
         </aside>
       </section>
 
-      <section className="panel transaction-panel" aria-label="Network transaction drilldown">
-        <div className="panel-title">
-          <div>
-            <p className="eyebrow">Network correlation</p>
-            <h2>Recent transaction outcomes</h2>
-          </div>
-          <span>{snapshot.networkTransactions.length} fixture records</span>
-        </div>
-        <div className="transaction-list">
-          {snapshot.networkTransactions.map((transaction) => (
-            <article className="transaction" key={transaction.id}>
-              <div>
-                <strong>{transaction.issuerId}</strong>
-                <small>STAN {transaction.stan} · RRN {transaction.rrn}</small>
-              </div>
-              <div>
-                <span className={`pill disposition-${transaction.disposition}`}>
-                  {transaction.disposition.replace("_", " ")}
-                </span>
-                <small>
-                  {transaction.latencyMs === null ? "latency unavailable" : `${transaction.latencyMs} ms`}
-                </small>
-              </div>
-              <div>
-                <strong>{transaction.reversalReason ? "Reversal linked" : "No reversal"}</strong>
-                <small>
-                  {transaction.reversalReason
-                    ? `${transaction.reversalReason.replace("_", " ")} · STAN ${transaction.reversalStan} · RRN ${transaction.reversalRrn}`
-                    : "No reversal correlation in snapshot"}
-                </small>
-              </div>
-            </article>
-          ))}
-        </div>
+      <section className="operator-checks" aria-label="Reconciliation and outbox workflow">
+        {operatorChecks.map((check) => (
+          <article className={"panel operator-check operator-check-" + check.severity} key={check.id}>
+            <div>
+              <p className="eyebrow">Read-only workflow</p>
+              <h2>{check.title}</h2>
+            </div>
+            <p>{check.summary}</p>
+            <strong>{check.operatorAction}</strong>
+          </article>
+        ))}
       </section>
+
+      <TransactionExplorer transactions={snapshot.networkTransactions} />
     </main>
   );
 }
