@@ -49,7 +49,18 @@ h2 { margin: 4px 0 0; font-size: 22px; }
 .missing { margin-top: 6px; padding: 16px; border: 1px dashed #344055; border-radius: 14px; }
 .missing strong { font-size: 13px; }
 .missing p { margin: 8px 0 0; color: #7f8ca0; font-size: 13px; line-height: 1.5; }
+.operator-checks { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 12px; }
+.operator-check { display: grid; gap: 14px; }
+.operator-check p { margin: 0; color: #9aa7ba; line-height: 1.5; }
+.operator-check strong { font-size: 13px; line-height: 1.5; }
+.operator-check-ok { border-color: #244533; }
+.operator-check-warning { border-color: #4b3b21; }
+.operator-check-critical { border-color: #5a2730; }
 .transaction-panel { margin-top: 12px; }
+.transaction-filters { display: grid; grid-template-columns: minmax(0, 1fr) 220px; gap: 12px; margin-top: 18px; }
+.transaction-filters label { display: grid; gap: 7px; color: #8f9bb0; font-size: 12px; }
+.transaction-filters input, .transaction-filters select { width: 100%; border: 1px solid #30394a; border-radius: 10px; background: #0d121b; color: #f5f7fb; padding: 10px 12px; }
+.empty-state { margin: 18px 0 0; color: #8f9bb0; }
 .transaction-list { display: grid; }
 .transaction { display: grid; grid-template-columns: 1.05fr .65fr 1.25fr; gap: 18px; padding: 18px 0; align-items: center; border-bottom: 1px solid #1c2431; }
 .transaction:last-child { border-bottom: 0; }
@@ -61,6 +72,8 @@ h2 { margin: 4px 0 0; font-size: 22px; }
   .status { width: 100%; }
   .metrics { grid-template-columns: repeat(2, 1fr); }
   .grid { grid-template-columns: 1fr; }
+  .operator-checks { grid-template-columns: 1fr; }
+  .transaction-filters { grid-template-columns: 1fr; }
   .transaction { grid-template-columns: 1fr 1fr; }
   .transaction > div:last-child { grid-column: 1 / -1; }
 }
