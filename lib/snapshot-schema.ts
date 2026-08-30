@@ -26,6 +26,17 @@ function number(value: unknown, path: string): number {
   return value;
 }
 
+function boolean(value: unknown, path: string): boolean {
+  if (typeof value !== "boolean") throw new SnapshotContractError(`${path} must be a boolean`);
+  return value;
+}
+
+function rate(value: unknown, path: string): number {
+  const parsed = number(value, path);
+  if (parsed < 0 || parsed > 1) throw new SnapshotContractError(`${path} must be between 0 and 1`);
+  return parsed;
+}
+
 function nonNegative(value: unknown, path: string): number {
   const parsed = number(value, path);
   if (parsed < 0) throw new SnapshotContractError(`${path} must be non-negative`);
@@ -77,7 +88,7 @@ export function parseOperationalSnapshot(value: unknown): OperationalSnapshot {
       const issuer = object(entry, `snapshot.issuers[${index}]`);
       return {
         issuerId: string(issuer.issuerId, `snapshot.issuers[${index}].issuerId`),
-        authorizationRate: number(issuer.authorizationRate, `snapshot.issuers[${index}].authorizationRate`),
+        authorizationRate: rate(issuer.authorizationRate, `snapshot.issuers[${index}].authorizationRate`),
         p95LatencyMs: nonNegative(issuer.p95LatencyMs, `snapshot.issuers[${index}].p95LatencyMs`),
         timedOut: nonNegative(issuer.timedOut, `snapshot.issuers[${index}].timedOut`),
         routeState: literal(
@@ -109,7 +120,10 @@ export function parseOperationalSnapshot(value: unknown): OperationalSnapshot {
         transaction.reversalRrn === null
           ? null
           : string(transaction.reversalRrn, `snapshot.networkTransactions[${index}].reversalRrn`);
-      if ((reversalReason === null) !== (reversalStan === null || reversalRrn === null)) {
+      const reversalNulls = [reversalReason, reversalStan, reversalRrn].filter(
+        (value) => value === null,
+      ).length;
+      if (reversalNulls !== 0 && reversalNulls !== 3) {
         throw new SnapshotContractError(
           `snapshot.networkTransactions[${index}] reversal fields must be present together`,
         );
@@ -131,7 +145,7 @@ export function parseOperationalSnapshot(value: unknown): OperationalSnapshot {
       };
     }),
     ledger: {
-      balanced: Boolean(ledger.balanced),
+      balanced: boolean(ledger.balanced, "snapshot.ledger.balanced"),
       discrepancies: nonNegative(ledger.discrepancies, "snapshot.ledger.discrepancies"),
       lastReconciledAt: string(ledger.lastReconciledAt, "snapshot.ledger.lastReconciledAt"),
     },
