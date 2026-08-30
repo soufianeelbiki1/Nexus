@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   AtlasPayApiSource,
   AtlasPayContractError,
+  type AtlasPayOperatorSnapshot,
   parseAtlasPayOperatorSnapshot,
 } from "../lib/atlaspay-api";
 
@@ -69,7 +70,7 @@ test("available sections cannot smuggle unknown values as null", () => {
 });
 
 test("unavailable durable sections retain null rather than fabricated zero", () => {
-  const unavailable = structuredClone(validSnapshot);
+  const unavailable = structuredClone(validSnapshot) as unknown as AtlasPayOperatorSnapshot;
   unavailable.payments = {
     state: "unavailable",
     total: null as unknown as number,
