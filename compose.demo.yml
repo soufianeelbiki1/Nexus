@@ -1,0 +1,76 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: atlaspay
+      POSTGRES_USER: atlaspay
+      POSTGRES_PASSWORD: atlaspay
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U atlaspay -d atlaspay"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - atlaspay-demo-db:/var/lib/postgresql/data
+
+  atlaspay-migrate:
+    build:
+      context: ../AtlasPay
+    environment:
+      DATABASE_URL: postgresql://atlaspay:atlaspay@postgres:5432/atlaspay
+    command: ["python", "-m", "app.migrations"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  atlaspay-seed:
+    build:
+      context: ../AtlasPay
+    environment:
+      DATABASE_URL: postgresql://atlaspay:atlaspay@postgres:5432/atlaspay
+    command: ["python", "-m", "app.demo_network", "--reset"]
+    depends_on:
+      atlaspay-migrate:
+        condition: service_completed_successfully
+    restart: "no"
+
+  atlaspay:
+    build:
+      context: ../AtlasPay
+    environment:
+      DATABASE_URL: postgresql://atlaspay:atlaspay@postgres:5432/atlaspay
+      ATLASPAY_OPS_TOKEN: ${ATLASPAY_OPS_TOKEN:-local-demo-token}
+    ports:
+      - "8000:8000"
+    depends_on:
+      atlaspay-seed:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2)",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+
+  nexus:
+    build:
+      context: .
+    environment:
+      ATLASPAY_API_BASE_URL: http://atlaspay:8000
+      ATLASPAY_API_TOKEN: ${ATLASPAY_OPS_TOKEN:-local-demo-token}
+      ATLASPAY_API_TIMEOUT_MS: "3000"
+    ports:
+      - "3000:3000"
+    depends_on:
+      atlaspay:
+        condition: service_healthy
+
+volumes:
+  atlaspay-demo-db:
