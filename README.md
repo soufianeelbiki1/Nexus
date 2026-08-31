@@ -1,71 +1,41 @@
 # Nexus
 
-**Typed Next.js operator control plane for AtlasPay with fail-closed live data handling, operational diagnostics, and explicit unavailable states.**
+Nexus is a Next.js/TypeScript operations console for AtlasPay. It reads a versioned operational snapshot, validates it at runtime and renders unavailable or degraded states when the backend cannot provide reliable data.
 
-Nexus is the full-stack product/UI layer of the AtlasPay ecosystem. It is designed as an operator console rather than a decorative dashboard: operational data is validated against versioned contracts, live API failures do not silently fall back to fixtures, and metrics that AtlasPay cannot durably expose remain explicitly unavailable.
+The repository supports both a fixture mode for local UI development and an authenticated AtlasPay API mode. Once live mode is configured, a failed API call does not fall back to fixture numbers.
 
-> The repository includes fixture-backed contract-development views and live AtlasPay integration. Fixture telemetry is labeled non-production and is never substituted after a configured live source fails.
+## Current views
 
-## What is implemented
+- payment status and operation counts;
+- ledger reconciliation state;
+- outbox backlog and poison-event age;
+- incidents and missing sections;
+- transaction filtering;
+- read-only reconciliation workflows.
 
-- Next.js App Router + React + strict TypeScript application.
-- Typed operational snapshot schema covering payment status, ledger reconciliation, outbox health, incidents, freshness, provenance, and unavailable sections.
-- Runtime validation before telemetry reaches the UI.
-- AtlasPay operational API client with bearer authentication, bounded timeout, no-store fetches, and contract validation.
-- Environment-driven live source selection using `ATLASPAY_API_BASE_URL`, `ATLASPAY_API_TOKEN`, and optional `ATLASPAY_API_TIMEOUT_MS`.
-- Fail-closed behavior for partial configuration, authentication, transport, and contract failures.
-- Explicit `ready`, `stale`, `partial`, and `unavailable` states.
-- Live rendering for durable AtlasPay payment, ledger, outbox, incident, and missing-section data.
-- Transaction filtering and reconciliation workflows in the operator UI.
-- Fixture-only issuer/route and transaction drill-down retained as contract-development views until AtlasPay publishes durable network read models.
-- Responsive operator interface with automated TypeScript tests, typecheck, production build, and GitHub Actions CI.
+Issuer/route and richer transaction drill-down still use fixture data because AtlasPay does not yet persist the network history required for those live views.
 
-## Why fail-closed matters
-
-A monitoring console becomes dangerous when it displays plausible demo data after a real producer fails. Nexus therefore distinguishes two modes:
+## Data source behavior
 
 ```text
-No live API configured
-    -> explicit fixture / contract-development mode
+No AtlasPay API configured
+  -> fixture mode
 
-Live API configured
-    -> AtlasPay only
-       -> valid response: render durable telemetry
-       -> error / timeout / malformed contract: render unavailable state
-       -> never substitute fixture values
+AtlasPay API configured
+  -> authenticated request
+  -> runtime validation
+  -> ready / stale / partial / unavailable
 ```
 
-This keeps the operator's mental model aligned with what is actually known.
+The live client uses bearer authentication, bounded request timeouts and `no-store` fetches. Partial environment configuration is treated as an error rather than silently selecting fixture mode.
 
-## Architecture
+## Environment variables
 
 ```text
-AtlasPay operator API
-        |
-        v
-Authenticated API client
-        |
-        v
-Runtime contract validation
-        |
-        v
-Operator source / loader
-        |
-        +--> ready
-        +--> stale
-        +--> partial
-        +--> unavailable
-        |
-        v
-Next.js operational views
-  | payment lifecycle
-  | ledger reconciliation
-  | outbox health
-  | incidents
-  | transaction workflows
+ATLASPAY_API_BASE_URL
+ATLASPAY_API_TOKEN
+ATLASPAY_API_TIMEOUT_MS   # optional
 ```
-
-Fixture data passes through the same contract boundary for deterministic development and tests, but retains provenance identifying it as non-production telemetry.
 
 ## Local development
 
@@ -77,31 +47,18 @@ npm run build
 npm run dev
 ```
 
-For live mode, configure the AtlasPay operator endpoint and token in the environment. Incomplete live configuration intentionally fails closed.
+GitHub Actions runs the TypeScript tests, typecheck and production build.
 
-## Truthfulness boundaries
+## Limitations
 
-Nexus does not:
+- there is no verified public deployment yet;
+- live issuer latency and authorization-rate history are unavailable until AtlasPay persists those observations;
+- the UI does not automatically repair ledger state or replay outbox events;
+- fixture telemetry is for local contract/UI development only.
 
-- fabricate live issuer latency or network telemetry;
-- claim external message delivery guarantees;
-- auto-repair ledger/reconciliation state;
-- replay poison events automatically;
-- silently replace failed live API data with fixtures.
+## Roadmap
 
-Network/issuer drill-down remains unavailable in live mode until AtlasPay exposes a durable read model for those metrics.
-
-## Portfolio signal
-
-Nexus demonstrates:
-
-- full-stack TypeScript/React/Next.js engineering;
-- runtime API-contract validation and typed integration boundaries;
-- operational UX for degraded and unavailable states;
-- authentication-aware server-side data access;
-- production-minded observability semantics rather than mock dashboard metrics;
-- cross-repository frontend/backend contract design with AtlasPay.
-
-## Next engineering milestone
-
-Extend AtlasPay's durable operator contract with authorization/network aggregates, issuer-route state, timeout/late-response counts, and transaction/reversal correlations; then replace the remaining fixture-only network views with validated live sections.
+1. Extend the AtlasPay operator API with durable authorization/network aggregates.
+2. Replace fixture-only issuer and transaction views with validated live data.
+3. Add a one-command AtlasPay + Nexus demo environment with seeded failure scenarios.
+4. Add deployment and observability documentation once the demo environment is stable.
