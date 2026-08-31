@@ -8,12 +8,27 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
+          cache-dependency-path: package.json
       - run: npm install
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+
+  container:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build runtime image
+        run: docker build --tag nexus:ci .
+      - name: Verify non-root runtime user
+        run: test "$(docker image inspect nexus:ci --format '{{.Config.User}}')" = "nexus"
