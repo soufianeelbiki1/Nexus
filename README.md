@@ -30,7 +30,21 @@ AtlasPay API configured
 
 The live client uses bearer authentication, bounded request timeouts and `no-store` fetches. Partial environment configuration is treated as an error rather than silently selecting fixture mode.
 
-## Run against AtlasPay locally
+## Integrated local demo
+
+Clone AtlasPay and Nexus as sibling directories, then run the complete demo stack from Nexus:
+
+```bash
+docker compose -f compose.demo.yml up --build
+```
+
+The Compose stack starts PostgreSQL, runs AtlasPay migrations, seeds deterministic authorization/network scenarios, starts the AtlasPay API and connects Nexus to the protected operational snapshot. Open `http://localhost:3000` for Nexus and `http://localhost:8000/docs` for AtlasPay OpenAPI.
+
+See [`docs/LOCAL_DEMO.md`](docs/LOCAL_DEMO.md) for the scenario walkthrough, failure demonstration, reset commands and direct snapshot inspection.
+
+The same stack is exercised by GitHub Actions: CI builds both applications, starts the Compose services, verifies the authenticated AtlasPay snapshot and checks that the seeded accepted, timeout and late-response observations are present.
+
+## Run against AtlasPay manually
 
 Start from a migrated AtlasPay PostgreSQL database and generate the deterministic network scenarios in the AtlasPay repository:
 
@@ -71,7 +85,7 @@ npm run build
 npm run dev
 ```
 
-GitHub Actions runs the TypeScript tests, typecheck and production build.
+GitHub Actions runs the TypeScript tests, typecheck, production build, runtime container build and integrated AtlasPay/Nexus smoke test.
 
 ## Limitations
 
@@ -84,5 +98,5 @@ GitHub Actions runs the TypeScript tests, typecheck and production build.
 
 1. Add route/issuer breakdowns to the durable AtlasPay network contract.
 2. Replace the remaining fixture-only transaction drill-down fields with durable backend facts.
-3. Package AtlasPay, PostgreSQL and Nexus into a simpler local multi-service demo.
-4. Add deployment and observability documentation once that environment is stable.
+3. Add Prometheus/Grafana-ready local observability views for the integrated stack.
+4. Add deployment documentation once a public environment is stable and verified.
