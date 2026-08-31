@@ -36,6 +36,9 @@ export function LiveOperatorSnapshot({
   const paymentStatuses = Object.entries(snapshot.payments.by_status ?? {}).sort((left, right) =>
     left[0].localeCompare(right[0]),
   );
+  const networkDispositions = Object.entries(snapshot.network.by_disposition ?? {}).sort(
+    (left, right) => left[0].localeCompare(right[0]),
+  );
 
   return (
     <main className="shell">
@@ -100,9 +103,13 @@ export function LiveOperatorSnapshot({
           </small>
         </article>
         <article>
-          <p>Network analytics</p>
-          <strong>{snapshot.network.state === "available" ? "Available" : "Unavailable"}</strong>
-          <small>{sectionDetail(snapshot.network.state, snapshot.network.reason)}</small>
+          <p>Network observations</p>
+          <strong>{count(snapshot.network.observations)}</strong>
+          <small>
+            {snapshot.network.state === "available"
+              ? `${count(snapshot.network.timeouts)} timeouts · ${count(snapshot.network.late_responses)} late`
+              : sectionDetail(snapshot.network.state, snapshot.network.reason)}
+          </small>
         </article>
       </section>
 
@@ -144,6 +151,49 @@ export function LiveOperatorSnapshot({
           )}
         </article>
 
+        <article className="panel">
+          <div className="panel-title">
+            <div>
+              <p className="eyebrow">Durable network history</p>
+              <h2>Authorization outcomes</h2>
+            </div>
+            <span>
+              {snapshot.network.p95_latency_ms === null
+                ? "p95 unavailable"
+                : `p95 ${Math.round(snapshot.network.p95_latency_ms).toLocaleString("en-GB")} ms`}
+            </span>
+          </div>
+          {snapshot.network.state === "available" ? (
+            <div className="issuer-list">
+              {networkDispositions.map(([disposition, value]) => (
+                <div className="issuer" key={disposition}>
+                  <div>
+                    <strong>{disposition}</strong>
+                    <small>Persisted network disposition</small>
+                  </div>
+                  <div className="issuer-metric">
+                    <strong>{value.toLocaleString("en-GB")}</strong>
+                    <small>observations</small>
+                  </div>
+                </div>
+              ))}
+              {networkDispositions.length === 0 ? (
+                <div className="missing">
+                  <strong>No network observations yet</strong>
+                  <p>Run AtlasPay&apos;s deterministic local network demo to populate this view.</p>
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <div className="missing">
+              <strong>Network history unavailable</strong>
+              <p>{snapshot.network.reason ?? "AtlasPay did not expose durable network data."}</p>
+            </div>
+          )}
+        </article>
+      </section>
+
+      <section className="grid">
         <aside className="panel incidents">
           <div className="panel-title">
             <div>
@@ -169,6 +219,19 @@ export function LiveOperatorSnapshot({
             <p>{snapshot.missing_sections.join(" · ") || "None"}</p>
           </div>
         </aside>
+
+        <article className="panel operator-check">
+          <div>
+            <p className="eyebrow">Network diagnostics</p>
+            <h2>Timeout and late-response state</h2>
+          </div>
+          <p>
+            {snapshot.network.state === "available"
+              ? `${count(snapshot.network.timeouts)} timeout observations and ${count(snapshot.network.late_responses)} late responses. p95 elapsed time is ${count(snapshot.network.p95_latency_ms)} ms.`
+              : snapshot.network.reason ?? "Network history is unavailable."}
+          </p>
+          <strong>Timeouts preserve delivery ambiguity; they are not treated as proof of remote failure.</strong>
+        </article>
       </section>
 
       <section className="operator-checks" aria-label="Live section diagnostics">

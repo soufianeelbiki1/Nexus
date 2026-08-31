@@ -9,11 +9,12 @@ The repository supports both a fixture mode for local UI development and an auth
 - payment status and operation counts;
 - ledger reconciliation state;
 - outbox backlog and poison-event age;
+- durable network observation counts and dispositions;
+- timeout and late-response counts;
+- p95 network elapsed time;
 - incidents and missing sections;
 - transaction filtering;
 - read-only reconciliation workflows.
-
-Issuer/route and richer transaction drill-down still use fixture data because AtlasPay does not yet persist the network history required for those live views.
 
 ## Data source behavior
 
@@ -28,6 +29,29 @@ AtlasPay API configured
 ```
 
 The live client uses bearer authentication, bounded request timeouts and `no-store` fetches. Partial environment configuration is treated as an error rather than silently selecting fixture mode.
+
+## Run against AtlasPay locally
+
+Start from a migrated AtlasPay PostgreSQL database and generate the deterministic network scenarios in the AtlasPay repository:
+
+```bash
+export DATABASE_URL=postgresql://atlaspay:atlaspay@localhost:5432/atlaspay
+python -m app.migrations
+python -m app.demo_network --reset
+export ATLASPAY_OPS_TOKEN=local-demo-token
+uvicorn app.main:app --reload
+```
+
+Then start Nexus with live mode enabled:
+
+```bash
+export ATLASPAY_API_BASE_URL=http://localhost:8000
+export ATLASPAY_API_TOKEN=local-demo-token
+npm install
+npm run dev
+```
+
+The live network panel should show the persisted accepted, timed-out and late-response dispositions from AtlasPay. The known-local transport failure is counted as an observation but has no authorization disposition. These are deterministic simulation scenarios, not card-network traffic.
 
 ## Environment variables
 
@@ -52,13 +76,13 @@ GitHub Actions runs the TypeScript tests, typecheck and production build.
 ## Limitations
 
 - there is no verified public deployment yet;
-- live issuer latency and authorization-rate history are unavailable until AtlasPay persists those observations;
+- current network summaries are aggregate operational facts rather than a full network-message history;
 - the UI does not automatically repair ledger state or replay outbox events;
 - fixture telemetry is for local contract/UI development only.
 
 ## Roadmap
 
-1. Extend the AtlasPay operator API with durable authorization/network aggregates.
-2. Replace fixture-only issuer and transaction views with validated live data.
-3. Add a one-command AtlasPay + Nexus demo environment with seeded failure scenarios.
-4. Add deployment and observability documentation once the demo environment is stable.
+1. Add route/issuer breakdowns to the durable AtlasPay network contract.
+2. Replace the remaining fixture-only transaction drill-down fields with durable backend facts.
+3. Package AtlasPay, PostgreSQL and Nexus into a simpler local multi-service demo.
+4. Add deployment and observability documentation once that environment is stable.

@@ -15,7 +15,7 @@ const validSnapshot = {
     contract_version: "v1",
   },
   health: "degraded",
-  data_state: "partial",
+  data_state: "fresh",
   payments: {
     state: "available",
     total: 12,
@@ -39,52 +39,62 @@ const validSnapshot = {
     reason: null,
   },
   network: {
-    state: "unavailable",
-    reason: "network observations are not durably snapshotted",
+    state: "available",
+    observations: 4,
+    by_disposition: { accepted: 1, timed_out: 1, late: 1 },
+    timeouts: 1,
+    late_responses: 1,
+    p95_latency_ms: 2000,
+    reason: null,
   },
   incidents: [],
-  missing_sections: ["network"],
+  missing_sections: [],
 };
 
-test("strict parser preserves measured values and unavailable network state", () => {
+test("strict parser preserves durable AtlasPay measurements", () => {
   const snapshot = parseAtlasPayOperatorSnapshot(validSnapshot);
 
   assert.equal(snapshot.provenance.contract_version, "v1");
   assert.equal(snapshot.payments.total, 12);
   assert.equal(snapshot.ledger.balanced, true);
   assert.equal(snapshot.outbox.oldest_unpublished_age_seconds, 4.5);
-  assert.equal(snapshot.network.state, "unavailable");
-  assert.deepEqual(snapshot.missing_sections, ["network"]);
+  assert.equal(snapshot.network.state, "available");
+  assert.equal(snapshot.network.observations, 4);
+  assert.equal(snapshot.network.timeouts, 1);
+  assert.equal(snapshot.network.late_responses, 1);
+  assert.equal(snapshot.network.p95_latency_ms, 2000);
+  assert.deepEqual(snapshot.missing_sections, []);
 });
 
 test("available sections cannot smuggle unknown values as null", () => {
   const invalid = structuredClone(validSnapshot);
-  invalid.outbox.unpublished = null as unknown as number;
+  invalid.network.p95_latency_ms = null as unknown as number;
 
   assert.throws(
     () => parseAtlasPayOperatorSnapshot(invalid),
     (error) =>
       error instanceof AtlasPayContractError &&
-      error.message.includes("snapshot.outbox.unpublished cannot be null"),
+      error.message.includes("snapshot.network.p95_latency_ms cannot be null"),
   );
 });
 
-test("unavailable durable sections retain null rather than fabricated zero", () => {
+test("unavailable sections retain null rather than fabricated zero", () => {
   const unavailable = structuredClone(validSnapshot) as unknown as AtlasPayOperatorSnapshot;
-  unavailable.payments = {
+  unavailable.network = {
     state: "unavailable",
-    total: null as unknown as number,
-    by_status: null as unknown as Record<string, number>,
-    operations: null as unknown as number,
-    reason: "database unavailable",
+    observations: null,
+    by_disposition: null,
+    timeouts: null,
+    late_responses: null,
+    p95_latency_ms: null,
+    reason: "network history unavailable",
   };
 
   const parsed = parseAtlasPayOperatorSnapshot(unavailable);
 
-  assert.equal(parsed.payments.state, "unavailable");
-  assert.equal(parsed.payments.total, null);
-  assert.equal(parsed.payments.by_status, null);
-  assert.equal(parsed.payments.operations, null);
+  assert.equal(parsed.network.state, "unavailable");
+  assert.equal(parsed.network.observations, null);
+  assert.equal(parsed.network.p95_latency_ms, null);
 });
 
 test("API source sends bearer credentials and validates the response", async () => {
@@ -109,6 +119,7 @@ test("API source sends bearer credentials and validates the response", async () 
   assert.equal(receivedUrl, "https://atlaspay.example/v1/ops/snapshot");
   assert.equal(authorization, "Bearer operator-secret");
   assert.equal(snapshot.outbox.unpublished, 2);
+  assert.equal(snapshot.network.by_disposition?.accepted, 1);
 });
 
 test("API source fails closed on non-success response without fixture fallback", async () => {

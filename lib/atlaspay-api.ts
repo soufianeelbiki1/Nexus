@@ -41,6 +41,11 @@ export interface AtlasPayOperatorSnapshot {
   };
   network: {
     state: SectionState;
+    observations: number | null;
+    by_disposition: Record<string, number> | null;
+    timeouts: number | null;
+    late_responses: number | null;
+    p95_latency_ms: number | null;
     reason: string | null;
   };
   incidents: string[];
@@ -158,6 +163,29 @@ export function parseAtlasPayOperatorSnapshot(value: unknown): AtlasPayOperatorS
     ["snapshot.outbox.oldest_unpublished_age_seconds", oldestAge],
   ]);
 
+  const networkState = literal(network.state, ["available", "unavailable"], "snapshot.network.state");
+  const networkObservations = nullableNonNegative(network.observations, "snapshot.network.observations");
+  const networkDispositions = nullableCounterMap(
+    network.by_disposition,
+    "snapshot.network.by_disposition",
+  );
+  const networkTimeouts = nullableNonNegative(network.timeouts, "snapshot.network.timeouts");
+  const networkLateResponses = nullableNonNegative(
+    network.late_responses,
+    "snapshot.network.late_responses",
+  );
+  const networkP95Latency = nullableNonNegative(
+    network.p95_latency_ms,
+    "snapshot.network.p95_latency_ms",
+  );
+  requireAvailableFields(networkState, [
+    ["snapshot.network.observations", networkObservations],
+    ["snapshot.network.by_disposition", networkDispositions],
+    ["snapshot.network.timeouts", networkTimeouts],
+    ["snapshot.network.late_responses", networkLateResponses],
+    ["snapshot.network.p95_latency_ms", networkP95Latency],
+  ]);
+
   return {
     provenance: {
       source: literal(provenance.source, ["atlaspay-api"], "snapshot.provenance.source"),
@@ -193,7 +221,12 @@ export function parseAtlasPayOperatorSnapshot(value: unknown): AtlasPayOperatorS
       reason: nullableText(outbox.reason, "snapshot.outbox.reason"),
     },
     network: {
-      state: literal(network.state, ["available", "unavailable"], "snapshot.network.state"),
+      state: networkState,
+      observations: networkObservations,
+      by_disposition: networkDispositions,
+      timeouts: networkTimeouts,
+      late_responses: networkLateResponses,
+      p95_latency_ms: networkP95Latency,
       reason: nullableText(network.reason, "snapshot.network.reason"),
     },
     incidents: stringArray(root.incidents, "snapshot.incidents"),
