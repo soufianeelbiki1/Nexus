@@ -1,0 +1,75 @@
+name: Security checks
+
+on:
+  pull_request:
+    paths:
+      - "package.json"
+      - "app/**"
+      - "lib/**"
+      - "Dockerfile"
+      - ".github/workflows/security.yml"
+  push:
+    branches: [main]
+    paths:
+      - "package.json"
+      - "app/**"
+      - "lib/**"
+      - "Dockerfile"
+      - ".github/workflows/security.yml"
+  schedule:
+    - cron: "31 5 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install dependencies
+        run: npm install --ignore-scripts
+
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+
+  runtime-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build runtime image
+        run: docker build --tag nexus:security .
+
+      - name: Verify runtime user
+        run: test "$(docker image inspect nexus:security --format '{{.Config.User}}')" = "nexus"
+
+      - name: Start runtime image
+        run: docker run --rm -d --name nexus-security -p 13000:3000 nexus:security
+
+      - name: Verify HTTP response
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 45); do
+            if curl -fsS http://127.0.0.1:13000 >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs nexus-security
+          exit 1
+
+      - name: Stop runtime image
+        if: always()
+        run: docker stop nexus-security || true
