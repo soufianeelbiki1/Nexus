@@ -1,0 +1,89 @@
+name: Integrated demo smoke
+
+on:
+  pull_request:
+    paths:
+      - "compose.demo.yml"
+      - "Dockerfile"
+      - "package.json"
+      - "app/**"
+      - "lib/**"
+      - ".github/workflows/demo-smoke.yml"
+  push:
+    branches: [main]
+    paths:
+      - "compose.demo.yml"
+      - "Dockerfile"
+      - "package.json"
+      - "app/**"
+      - "lib/**"
+      - ".github/workflows/demo-smoke.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  demo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout Nexus
+        uses: actions/checkout@v4
+        with:
+          path: Nexus
+
+      - name: Checkout AtlasPay
+        uses: actions/checkout@v4
+        with:
+          repository: soufianeelbiki1/AtlasPay
+          path: AtlasPay
+
+      - name: Validate Compose configuration
+        run: docker compose -f Nexus/compose.demo.yml config
+
+      - name: Start integrated demo
+        run: docker compose -f Nexus/compose.demo.yml up --build -d
+
+      - name: Wait for AtlasPay and Nexus
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8000/health >/dev/null \
+              && curl -fsS http://127.0.0.1:3000 >/dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Demo stack did not become healthy in time" >&2
+          exit 1
+
+      - name: Verify deterministic network snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS \
+            -H "Authorization: Bearer local-demo-token" \
+            http://127.0.0.1:8000/v1/ops/snapshot \
+            > /tmp/atlaspay-snapshot.json
+
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          snapshot = json.loads(Path("/tmp/atlaspay-snapshot.json").read_text())
+          network = snapshot["network"]
+          assert network["state"] == "available", network
+          assert network["observations"] >= 4, network
+          assert network["timeouts"] >= 1, network
+          assert network["late_responses"] >= 1, network
+          assert network["by_disposition"].get("accepted", 0) >= 1, network
+          PY
+
+      - name: Print service logs on failure
+        if: failure()
+        run: docker compose -f Nexus/compose.demo.yml logs --no-color
+
+      - name: Stop integrated demo
+        if: always()
+        run: docker compose -f Nexus/compose.demo.yml down -v
