@@ -67,6 +67,12 @@ npm run dev
 
 The live network panel should show the persisted accepted, timed-out and late-response dispositions from AtlasPay. The known-local transport failure is counted as an observation but has no authorization disposition. These are deterministic simulation scenarios, not card-network traffic.
 
+## Verified deployment topology
+
+The AtlasPay backend is now deployed as a public HTTPS Railway service backed by a Neon PostgreSQL project. The Java authorization service runs as a separate private Railway service against the same database. The production API deployment has verified health checks, controlled migrations and deterministic demo data.
+
+Nexus remains deployable to Vercel with either fixture mode or live mode. Configure the three server-side variables in the cloud checklist to connect the recruiter-facing console to the verified Railway backend.
+
 ## Environment variables
 
 ```text
@@ -89,7 +95,7 @@ GitHub Actions runs the TypeScript tests, typecheck, production build, runtime c
 
 ## Limitations
 
-- there is no verified public deployment yet;
+- the Vercel production project still requires the live-mode variables before the recruiter-facing console can read the Railway backend;
 - current network summaries are aggregate operational facts rather than a full network-message history;
 - the UI does not automatically repair ledger state or replay outbox events;
 - fixture telemetry is for local contract/UI development only.
@@ -99,4 +105,4 @@ GitHub Actions runs the TypeScript tests, typecheck, production build, runtime c
 1. Add route/issuer breakdowns to the durable AtlasPay network contract.
 2. Replace the remaining fixture-only transaction drill-down fields with durable backend facts.
 3. Add Prometheus/Grafana-ready local observability views for the integrated stack.
-4. Add deployment documentation once a public environment is stable and verified.
+4. Add a public live walkthrough after Vercel environment configuration and deployment-protection verification.
