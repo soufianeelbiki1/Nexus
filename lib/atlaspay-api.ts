@@ -9,6 +9,18 @@ export type SectionState = "available" | "unavailable";
 export type SnapshotHealth = "healthy" | "degraded" | "critical";
 export type AtlasPayDataState = "fresh" | "partial";
 
+export interface AtlasPayRouteNetworkSummary {
+  route_name: string;
+  issuer_id: string;
+  acquirer_id: string;
+  observations: number;
+  accepted: number;
+  timeouts: number;
+  late_responses: number;
+  delivery_unknown: number;
+  p95_latency_ms: number;
+}
+
 export interface AtlasPayOperatorSnapshot {
   provenance: {
     source: "atlaspay-api";
@@ -46,6 +58,7 @@ export interface AtlasPayOperatorSnapshot {
     timeouts: number | null;
     late_responses: number | null;
     p95_latency_ms: number | null;
+    routes: AtlasPayRouteNetworkSummary[] | null;
     reason: string | null;
   };
   incidents: string[];
@@ -105,6 +118,52 @@ function nullableCounterMap(value: unknown, path: string): Record<string, number
   return Object.fromEntries(
     Object.entries(map).map(([key, entry]) => [key, nonNegative(entry, `${path}.${key}`)]),
   );
+}
+
+function nullableRouteArray(
+  value: unknown,
+  path: string,
+): AtlasPayRouteNetworkSummary[] | null {
+  if (value === null) return null;
+  if (!Array.isArray(value)) throw new AtlasPayContractError(`${path} must be an array or null`);
+
+  return value.map((entry, index) => {
+    const routePath = `${path}[${index}]`;
+    const route = object(entry, routePath);
+    const observations = nonNegative(route.observations, `${routePath}.observations`);
+    const accepted = nonNegative(route.accepted, `${routePath}.accepted`);
+    const timeouts = nonNegative(route.timeouts, `${routePath}.timeouts`);
+    const lateResponses = nonNegative(route.late_responses, `${routePath}.late_responses`);
+    const deliveryUnknown = nonNegative(
+      route.delivery_unknown,
+      `${routePath}.delivery_unknown`,
+    );
+
+    for (const [metric, amount] of [
+      ["accepted", accepted],
+      ["timeouts", timeouts],
+      ["late_responses", lateResponses],
+      ["delivery_unknown", deliveryUnknown],
+    ] as const) {
+      if (amount > observations) {
+        throw new AtlasPayContractError(
+          `${routePath}.${metric} cannot exceed ${routePath}.observations`,
+        );
+      }
+    }
+
+    return {
+      route_name: text(route.route_name, `${routePath}.route_name`),
+      issuer_id: text(route.issuer_id, `${routePath}.issuer_id`),
+      acquirer_id: text(route.acquirer_id, `${routePath}.acquirer_id`),
+      observations,
+      accepted,
+      timeouts,
+      late_responses: lateResponses,
+      delivery_unknown: deliveryUnknown,
+      p95_latency_ms: nonNegative(route.p95_latency_ms, `${routePath}.p95_latency_ms`),
+    };
+  });
 }
 
 function requireAvailableFields(
@@ -178,12 +237,14 @@ export function parseAtlasPayOperatorSnapshot(value: unknown): AtlasPayOperatorS
     network.p95_latency_ms,
     "snapshot.network.p95_latency_ms",
   );
+  const networkRoutes = nullableRouteArray(network.routes, "snapshot.network.routes");
   requireAvailableFields(networkState, [
     ["snapshot.network.observations", networkObservations],
     ["snapshot.network.by_disposition", networkDispositions],
     ["snapshot.network.timeouts", networkTimeouts],
     ["snapshot.network.late_responses", networkLateResponses],
     ["snapshot.network.p95_latency_ms", networkP95Latency],
+    ["snapshot.network.routes", networkRoutes],
   ]);
 
   return {
@@ -227,6 +288,7 @@ export function parseAtlasPayOperatorSnapshot(value: unknown): AtlasPayOperatorS
       timeouts: networkTimeouts,
       late_responses: networkLateResponses,
       p95_latency_ms: networkP95Latency,
+      routes: networkRoutes,
       reason: nullableText(network.reason, "snapshot.network.reason"),
     },
     incidents: stringArray(root.incidents, "snapshot.incidents"),

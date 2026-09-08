@@ -10,6 +10,7 @@ The repository supports both a fixture mode for local UI development and an auth
 - ledger reconciliation state;
 - outbox backlog and poison-event age;
 - durable network observation counts and dispositions;
+- route/issuer/acquirer latency, timeout, late-response and delivery-unknown breakdowns;
 - timeout and late-response counts;
 - p95 network elapsed time;
 - incidents and missing sections;
@@ -65,7 +66,7 @@ npm install
 npm run dev
 ```
 
-The live network panel should show the persisted accepted, timed-out and late-response dispositions from AtlasPay. The known-local transport failure is counted as an observation but has no authorization disposition. These are deterministic simulation scenarios, not card-network traffic.
+The live network panels should show the persisted accepted, timed-out and late-response dispositions plus privacy-safe route/issuer/acquirer breakdowns from AtlasPay. The known-local transport failure is counted as an observation but has no authorization disposition. These are deterministic simulation scenarios, not card-network traffic.
 
 ## Verified deployment topology
 
@@ -102,7 +103,6 @@ GitHub Actions runs the TypeScript tests, typecheck, production build, runtime c
 
 ## Roadmap
 
-1. Add route/issuer breakdowns to the durable AtlasPay network contract.
-2. Replace the remaining fixture-only transaction drill-down fields with durable backend facts.
-3. Add Prometheus/Grafana-ready local observability views for the integrated stack.
-4. Extend the live walkthrough with route/issuer breakdowns and durable transaction drill-down facts.
+1. Replace the remaining fixture-only transaction drill-down fields with privacy-safe durable backend facts.
+2. Add Prometheus/Grafana-ready local observability views for the integrated stack.
+3. Extend the live walkthrough with transaction correlation and bounded-retention diagnostics.

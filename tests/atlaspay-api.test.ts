@@ -45,6 +45,19 @@ const validSnapshot = {
     timeouts: 1,
     late_responses: 1,
     p95_latency_ms: 2000,
+    routes: [
+      {
+        route_name: "issuer-a",
+        issuer_id: "issuer-bank-a",
+        acquirer_id: "atlas-acquirer",
+        observations: 4,
+        accepted: 1,
+        timeouts: 1,
+        late_responses: 1,
+        delivery_unknown: 1,
+        p95_latency_ms: 2000,
+      },
+    ],
     reason: null,
   },
   incidents: [],
@@ -63,6 +76,8 @@ test("strict parser preserves durable AtlasPay measurements", () => {
   assert.equal(snapshot.network.timeouts, 1);
   assert.equal(snapshot.network.late_responses, 1);
   assert.equal(snapshot.network.p95_latency_ms, 2000);
+  assert.equal(snapshot.network.routes?.[0].issuer_id, "issuer-bank-a");
+  assert.equal(snapshot.network.routes?.[0].delivery_unknown, 1);
   assert.deepEqual(snapshot.missing_sections, []);
 });
 
@@ -87,6 +102,7 @@ test("unavailable sections retain null rather than fabricated zero", () => {
     timeouts: null,
     late_responses: null,
     p95_latency_ms: null,
+    routes: null,
     reason: "network history unavailable",
   };
 
@@ -95,6 +111,18 @@ test("unavailable sections retain null rather than fabricated zero", () => {
   assert.equal(parsed.network.state, "unavailable");
   assert.equal(parsed.network.observations, null);
   assert.equal(parsed.network.p95_latency_ms, null);
+});
+
+test("route metrics cannot exceed their observation count", () => {
+  const invalid = structuredClone(validSnapshot);
+  invalid.network.routes[0].timeouts = 5;
+
+  assert.throws(
+    () => parseAtlasPayOperatorSnapshot(invalid),
+    (error) =>
+      error instanceof AtlasPayContractError &&
+      error.message.includes("timeouts cannot exceed"),
+  );
 });
 
 test("API source sends bearer credentials and validates the response", async () => {
