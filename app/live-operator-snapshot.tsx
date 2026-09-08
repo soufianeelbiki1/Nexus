@@ -39,6 +39,9 @@ export function LiveOperatorSnapshot({
   const networkDispositions = Object.entries(snapshot.network.by_disposition ?? {}).sort(
     (left, right) => left[0].localeCompare(right[0]),
   );
+  const networkRoutes = [...(snapshot.network.routes ?? [])].sort((left, right) =>
+    left.route_name.localeCompare(right.route_name),
+  );
 
   return (
     <main className="shell">
@@ -190,6 +193,65 @@ export function LiveOperatorSnapshot({
               <p>{snapshot.network.reason ?? "AtlasPay did not expose durable network data."}</p>
             </div>
           )}
+        </article>
+      </section>
+
+      <section className="grid">
+        <article className="panel">
+          <div className="panel-title">
+            <div>
+              <p className="eyebrow">Durable routing diagnostics</p>
+              <h2>Issuer and acquirer routes</h2>
+            </div>
+            <span>{networkRoutes.length} routes</span>
+          </div>
+          {snapshot.network.state === "available" ? (
+            <div className="issuer-list">
+              {networkRoutes.map((route) => (
+                <div
+                  className="issuer"
+                  key={`${route.route_name}:${route.issuer_id}:${route.acquirer_id}`}
+                >
+                  <div>
+                    <strong>{route.route_name}</strong>
+                    <small>
+                      {route.issuer_id} → {route.acquirer_id}
+                    </small>
+                  </div>
+                  <div className="issuer-metric">
+                    <strong>{Math.round(route.p95_latency_ms).toLocaleString("en-GB")} ms</strong>
+                    <small>
+                      {route.accepted} accepted · {route.timeouts} timeout ·{" "}
+                      {route.late_responses} late · {route.delivery_unknown} delivery unknown
+                    </small>
+                  </div>
+                </div>
+              ))}
+              {networkRoutes.length === 0 ? (
+                <div className="missing">
+                  <strong>No route observations yet</strong>
+                  <p>The durable network source is available but contains no route rows.</p>
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <div className="missing">
+              <strong>Route diagnostics unavailable</strong>
+              <p>{snapshot.network.reason ?? "AtlasPay did not expose durable network data."}</p>
+            </div>
+          )}
+        </article>
+
+        <article className="panel operator-check">
+          <div>
+            <p className="eyebrow">Interpretation boundary</p>
+            <h2>Delivery remains ambiguous after timeout</h2>
+          </div>
+          <p>
+            Route rows are privacy-safe aggregates from PostgreSQL. They contain no PAN, STAN,
+            RRN, DE55, payload, or transaction identifier.
+          </p>
+          <strong>A timeout is reported as delivery unknown, never converted into a decline.</strong>
         </article>
       </section>
 
