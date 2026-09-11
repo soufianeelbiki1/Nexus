@@ -1,8 +1,34 @@
 # Nexus
 
-Nexus is a Next.js/TypeScript operations console for AtlasPay. It reads a versioned operational snapshot, validates it at runtime and renders unavailable or degraded states when the backend cannot provide reliable data.
+### Payment operations console · Next.js / TypeScript
 
-The repository supports both a fixture mode for local UI development and an authenticated AtlasPay API mode. Once live mode is configured, a failed API call does not fall back to fixture numbers.
+Nexus helps an operator investigate payment status, reconciliation, delivery backlogs and network failures in [AtlasPay](https://github.com/soufianeelbiki1/AtlasPay).
+
+It reads a versioned operational snapshot, validates it at runtime and makes stale, partial or unavailable data visible in the interface. The project connects frontend decisions to backend reliability: an operator needs to know both what happened and whether the current view can be trusted.
+
+[Local demo](docs/LOCAL_DEMO.md) · [API contract and loading](lib/atlaspay-api.ts) · [Tests](tests/) · [CI](https://github.com/soufianeelbiki1/Nexus/actions)
+
+## A short walkthrough
+
+1. Start the [integrated local demo](docs/LOCAL_DEMO.md).
+2. Inspect the seeded accepted, timeout and late-response observations.
+3. Compare network dispositions with reconciliation and outbox summaries.
+4. Stop the local AtlasPay service and refresh the console to inspect unavailable-source behaviour.
+5. Restart the service and inspect the recovered view.
+
+The data represents deterministic payment simulations. The local walkthrough runs without a hosted account or paid API.
+
+## Design decisions
+
+| Operator need | Implementation |
+| --- | --- |
+| Know whether the data is usable | Explicit ready, stale, partial and unavailable source states |
+| Detect an unexpected backend response | Runtime validation of the versioned snapshot |
+| Inspect payment-network trouble | Route, issuer and acquirer breakdowns |
+| Keep service credentials out of the browser | Server-side API requests with bearer authentication |
+| Inspect failure behaviour locally | Fixture mode plus a containerised integration demo |
+
+The repository supports both fixture mode for local UI development and authenticated AtlasPay API mode. Once live mode is configured, a failed API call does not fall back to fixture numbers.
 
 ## Current views
 
