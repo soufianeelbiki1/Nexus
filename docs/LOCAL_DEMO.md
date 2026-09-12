@@ -6,6 +6,13 @@ This demo starts PostgreSQL, migrates AtlasPay, inserts deterministic network sc
 
 Clone the repositories next to each other:
 
+For the reviewed reproducible baseline, use AtlasPay revision
+`7990d04f2485b9cf46ab5c540b0418a128b48a7b` (also pinned in demo CI).
+In a clean AtlasPay checkout, select it with
+`git switch --detach 7990d04f2485b9cf46ab5c540b0418a128b48a7b`.
+Preserve any local work before switching revisions. Node 24 and the committed
+lockfile are used for Nexus; use `npm ci` rather than resolving new dependencies.
+
 ```text
 workspace/
 ├── AtlasPay/
@@ -86,6 +93,12 @@ docker compose -f compose.demo.yml down -v
 ```
 
 ## Failure behavior worth demonstrating
+
+Integrated demo CI checks the seeded snapshot, authenticated console output,
+API shutdown with no fixture fallback, and recovery without reseeding. This
+checks server-rendered responses; it is not a substitute for browser interaction
+or accessibility tests. All services and test data run locally in the CI stack,
+without calling hosted Railway/Neon instances or a paid API.
 
 A useful interview walkthrough is to first show the healthy seeded stack and then demonstrate that Nexus does not invent data when AtlasPay is unavailable:
 
