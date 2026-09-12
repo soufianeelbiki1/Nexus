@@ -7,6 +7,10 @@ import { FixtureSnapshotSource, loadOperationalSnapshot } from "../lib/snapshot-
 import { LiveOperatorSnapshot } from "./live-operator-snapshot";
 import { TransactionExplorer } from "./transaction-explorer";
 
+// API credentials are supplied at runtime (for example by Docker Compose).
+// Never freeze fixture telemetry into a build that may later run in live mode.
+export const dynamic = "force-dynamic";
+
 function pct(value: number) {
   return `${(value * 100).toFixed(1)}%`;
 }
