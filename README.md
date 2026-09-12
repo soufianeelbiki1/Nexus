@@ -62,7 +62,7 @@ Then start Nexus with live mode enabled:
 ```bash
 export ATLASPAY_API_BASE_URL=http://localhost:8000
 export ATLASPAY_API_TOKEN=local-demo-token
-npm install
+npm ci
 npm run dev
 ```
 
@@ -85,7 +85,7 @@ ATLASPAY_API_TIMEOUT_MS   # optional
 ## Local development
 
 ```bash
-npm install
+npm ci
 npm test
 npm run typecheck
 npm run build
