@@ -88,17 +88,26 @@ Then start Nexus with live mode enabled:
 ```bash
 export ATLASPAY_API_BASE_URL=http://localhost:8000
 export ATLASPAY_API_TOKEN=local-demo-token
-npm install
+npm ci
 npm run dev
 ```
 
 The live network panels should show the persisted accepted, timed-out and late-response dispositions plus privacy-safe route/issuer/acquirer breakdowns from AtlasPay. The known-local transport failure is counted as an observation but has no authorization disposition. These are deterministic simulation scenarios, not card-network traffic.
 
-## Verified deployment topology
+## Demo deployment topology
 
-The AtlasPay backend is now deployed as a public HTTPS Railway service backed by a Neon PostgreSQL project. The Java authorization service runs as a separate private Railway service against the same database. The production API deployment has verified health checks, controlled migrations and deterministic demo data.
+As last rechecked on 13 September 2026, Vercel reported the public `main`
+deployment ready at Nexus commit `7553f6a211104c5290e7c546dc0c12e107add24a`.
+The AtlasPay Python API and separate private Java authorization service were
+configured on Railway against the same Neon PostgreSQL project; their latest
+deployments still referenced AtlasPay commit
+`7990d04f2485b9cf46ab5c540b0418a128b48a7b`.
 
-Nexus is deployed to Vercel in live mode and server-side configuration connects the recruiter-facing console to the verified Railway backend. The variables listed below remain required when reproducing the deployment in another environment.
+This is a simulation/demo topology, not evidence of production users, real-money
+traffic or permanent hosting. Railway is on a finite trial, so future public
+availability is not guaranteed. The review branch is separate from the public
+`main` deployment. When available, Nexus uses server-side configuration to reach
+the protected AtlasPay API; the variables below are required when reproducing it.
 
 ## Environment variables
 
@@ -111,7 +120,7 @@ ATLASPAY_API_TIMEOUT_MS   # optional
 ## Local development
 
 ```bash
-npm install
+npm ci
 npm test
 npm run typecheck
 npm run build
