@@ -83,6 +83,8 @@ h2 { margin: 4px 0 0; font-size: 22px; }
   .issuer { grid-template-columns: 1fr auto; }
   .issuer-metric { text-align: left; }
   .issuer .pill { grid-column: 2; grid-row: 1 / span 2; }
+  .route-row { grid-template-columns: 1fr; }
+  .route-row .issuer-metric { text-align: left; }
   .transaction { grid-template-columns: 1fr; }
   .transaction > div:last-child { grid-column: auto; }
 }

@@ -209,7 +209,7 @@ export function LiveOperatorSnapshot({
             <div className="issuer-list">
               {networkRoutes.map((route) => (
                 <div
-                  className="issuer"
+                  className="issuer route-row"
                   key={`${route.route_name}:${route.issuer_id}:${route.acquirer_id}`}
                 >
                   <div>
