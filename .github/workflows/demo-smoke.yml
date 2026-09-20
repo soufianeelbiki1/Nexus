@@ -6,6 +6,7 @@ on:
       - "compose.demo.yml"
       - "Dockerfile"
       - "package.json"
+      - "package-lock.json"
       - "app/**"
       - "lib/**"
       - ".github/workflows/demo-smoke.yml"
@@ -15,6 +16,7 @@ on:
       - "compose.demo.yml"
       - "Dockerfile"
       - "package.json"
+      - "package-lock.json"
       - "app/**"
       - "lib/**"
       - ".github/workflows/demo-smoke.yml"
@@ -36,6 +38,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: soufianeelbiki1/AtlasPay
+          # Explicitly update this revision after reviewing backend contract changes.
+          ref: 7990d04f2485b9cf46ab5c540b0418a128b48a7b
           path: AtlasPay
 
       - name: Validate Compose configuration
@@ -79,6 +83,29 @@ jobs:
           assert network["late_responses"] >= 1, network
           assert network["by_disposition"].get("accepted", 0) >= 1, network
           PY
+
+      - name: Verify live console fails closed during an API outage
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --max-time 15 -fsS http://127.0.0.1:3000 | python -c 'import sys; html=sys.stdin.read(); assert "Mode: authenticated API" in html; assert "Operational snapshot unavailable" not in html'
+          docker compose -f Nexus/compose.demo.yml stop atlaspay
+          curl --max-time 15 -fsS http://127.0.0.1:3000 | python -c 'import sys; html=sys.stdin.read(); assert "Operational snapshot unavailable" in html; assert "Contract-development fixture mode" not in html; assert "Mode: authenticated API" not in html'
+
+      - name: Verify live console recovers without reseeding
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker compose -f Nexus/compose.demo.yml start atlaspay
+          for attempt in $(seq 1 30); do
+            if curl --max-time 5 -fsS http://127.0.0.1:8000/health >/dev/null; then
+              curl --max-time 15 -fsS http://127.0.0.1:3000 | python -c 'import sys; html=sys.stdin.read(); assert "Mode: authenticated API" in html; assert "Operational snapshot unavailable" not in html'
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "AtlasPay did not recover within the bounded wait" >&2
+          exit 1
 
       - name: Print service logs on failure
         if: failure()

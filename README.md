@@ -1,8 +1,34 @@
 # Nexus
 
-Nexus is a Next.js/TypeScript operations console for AtlasPay. It reads a versioned operational snapshot, validates it at runtime and renders unavailable or degraded states when the backend cannot provide reliable data.
+### Payment operations console · Next.js / TypeScript
 
-The repository supports both a fixture mode for local UI development and an authenticated AtlasPay API mode. Once live mode is configured, a failed API call does not fall back to fixture numbers.
+Nexus helps an operator investigate payment status, reconciliation, delivery backlogs and network failures in [AtlasPay](https://github.com/soufianeelbiki1/AtlasPay).
+
+It reads a versioned operational snapshot, validates it at runtime and makes stale, partial or unavailable data visible in the interface. The project connects frontend decisions to backend reliability: an operator needs to know both what happened and whether the current view can be trusted.
+
+[Local demo](docs/LOCAL_DEMO.md) · [API contract and loading](lib/atlaspay-api.ts) · [Tests](tests/) · [CI](https://github.com/soufianeelbiki1/Nexus/actions)
+
+## A short walkthrough
+
+1. Start the [integrated local demo](docs/LOCAL_DEMO.md).
+2. Inspect the seeded accepted, timeout and late-response observations.
+3. Compare network dispositions with reconciliation and outbox summaries.
+4. Stop the local AtlasPay service and refresh the console to inspect unavailable-source behaviour.
+5. Restart the service and inspect the recovered view.
+
+The data represents deterministic payment simulations. The local walkthrough runs without a hosted account or paid API.
+
+## Design decisions
+
+| Operator need | Implementation |
+| --- | --- |
+| Know whether the data is usable | Explicit ready, stale, partial and unavailable source states |
+| Detect an unexpected backend response | Runtime validation of the versioned snapshot |
+| Inspect payment-network trouble | Route, issuer and acquirer breakdowns |
+| Keep service credentials out of the browser | Server-side API requests with bearer authentication |
+| Inspect failure behaviour locally | Fixture mode plus a containerised integration demo |
+
+The repository supports both fixture mode for local UI development and authenticated AtlasPay API mode. Once live mode is configured, a failed API call does not fall back to fixture numbers.
 
 ## Current views
 
@@ -62,17 +88,26 @@ Then start Nexus with live mode enabled:
 ```bash
 export ATLASPAY_API_BASE_URL=http://localhost:8000
 export ATLASPAY_API_TOKEN=local-demo-token
-npm install
+npm ci
 npm run dev
 ```
 
 The live network panels should show the persisted accepted, timed-out and late-response dispositions plus privacy-safe route/issuer/acquirer breakdowns from AtlasPay. The known-local transport failure is counted as an observation but has no authorization disposition. These are deterministic simulation scenarios, not card-network traffic.
 
-## Verified deployment topology
+## Demo deployment topology
 
-The AtlasPay backend is now deployed as a public HTTPS Railway service backed by a Neon PostgreSQL project. The Java authorization service runs as a separate private Railway service against the same database. The production API deployment has verified health checks, controlled migrations and deterministic demo data.
+As last rechecked on 13 September 2026, Vercel reported the public `main`
+deployment ready at Nexus commit `7553f6a211104c5290e7c546dc0c12e107add24a`.
+The AtlasPay Python API and separate private Java authorization service were
+configured on Railway against the same Neon PostgreSQL project; their latest
+deployments still referenced AtlasPay commit
+`7990d04f2485b9cf46ab5c540b0418a128b48a7b`.
 
-Nexus is deployed to Vercel in live mode and server-side configuration connects the recruiter-facing console to the verified Railway backend. The variables listed below remain required when reproducing the deployment in another environment.
+This is a simulation/demo topology, not evidence of production users, real-money
+traffic or permanent hosting. Railway is on a finite trial, so future public
+availability is not guaranteed. The review branch is separate from the public
+`main` deployment. When available, Nexus uses server-side configuration to reach
+the protected AtlasPay API; the variables below are required when reproducing it.
 
 ## Environment variables
 
@@ -85,7 +120,7 @@ ATLASPAY_API_TIMEOUT_MS   # optional
 ## Local development
 
 ```bash
-npm install
+npm ci
 npm test
 npm run typecheck
 npm run build
