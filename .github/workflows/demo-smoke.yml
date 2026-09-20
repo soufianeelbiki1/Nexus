@@ -30,12 +30,12 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Checkout Nexus
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: Nexus
 
       - name: Checkout AtlasPay
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: soufianeelbiki1/AtlasPay
           # Explicitly update this revision after reviewing backend contract changes.
